@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package analytics;
+
+option go_package = "event-analytics/proto";
+
+service AnalyticsService{
+    rpc GetEventCount(EventCountRequest) returns (EventCountResponse);
+}
+
+message EventCountRequest{
+    string user_id = 1;
+    string page_url = 2;
+}
+
+message EventCountResponse{
+    int64 count = 1;
+    string user_id = 2;
+    string page_url = 3;
+}
