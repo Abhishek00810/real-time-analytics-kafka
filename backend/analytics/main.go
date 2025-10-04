@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"log"
 	"net"
+	"os"
 
 	pb "event-analytics/proto/event-analytics/proto"
 
@@ -38,7 +39,7 @@ func (s *server) GetEventCount(ctx context.Context, req *pb.EventCountRequest) (
 
 func main() {
 	// DB connection
-	db, err := sql.Open("postgres", "postgres://user:pass@localhost:5432/events?sslmode=disable")
+	db, err := sql.Open("postgres", os.Getenv("DATABASE_URL"))
 	if err != nil {
 		log.Fatal(err)
 	}
