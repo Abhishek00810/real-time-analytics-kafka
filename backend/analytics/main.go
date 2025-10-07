@@ -40,6 +40,7 @@ func (s *server) GetEventCount(ctx context.Context, req *pb.EventCountRequest) (
 func main() {
 	// DB connection
 	db, err := sql.Open("postgres", os.Getenv("DATABASE_URL"))
+	log.Print(os.Getenv("DATABASE_URL"))
 	if err != nil {
 		log.Fatal(err)
 	}

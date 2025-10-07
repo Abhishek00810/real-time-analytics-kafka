@@ -1,5 +1,3 @@
--- init.sql 
-
 CREATE TABLE IF NOT EXISTS click_events (
     event_id   TEXT PRIMARY KEY,
     user_id    TEXT NOT NULL,

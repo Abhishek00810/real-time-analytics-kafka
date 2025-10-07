@@ -1,0 +1,53 @@
+
+services:
+  analytics:
+    build:
+      context: ./backend
+      dockerfile: analytics/Dockerfile
+    image: abhishekdadwal/analytics-service
+    env_file:
+      - .env
+    ports:
+      - "50051:50051"
+    networks:
+      - app-network
+
+  api-gateway:
+    build:
+      context: ./backend
+      dockerfile: api-gateway/Dockerfile
+    image: abhishekdadwal/api-gateway
+    env_file:
+      - .env
+    networks:
+      - app-network
+
+  processor:
+    build:
+      context: ./backend
+      dockerfile: processor/Dockerfile
+    image: abhishekdadwal/processor
+    env_file:
+      - .env
+    networks:
+      - app-network
+
+  ingestion:
+    build:
+      context: ./backend
+      dockerfile: ingestion/Dockerfile
+    image: abhishekdadwal/ingestion
+    env_file:
+      - .env
+    ports:
+      - "8080:8080"
+    networks:
+      - app-network
+
+volumes:
+  postgres-data:
+networks:
+  app-network:
+    external: true
+    name: app-network
+
