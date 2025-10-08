@@ -17,8 +17,12 @@ services:
       context: ./backend
       dockerfile: api-gateway/Dockerfile
     image: abhishekdadwal/api-gateway
+    ports:
+      - "8081:8081"
     env_file:
       - .env
+    depends_on:
+      - analytics
     networks:
       - app-network
 

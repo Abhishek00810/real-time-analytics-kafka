@@ -16,10 +16,21 @@ import (
 var analyticsClient pb.AnalyticsServiceClient
 
 func initGRPCclient() {
-	conn, err := grpc.NewClient("localhost:50051", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	var conn *grpc.ClientConn
+	var err error
+
+	// Retry connection with backoff
+	for i := 0; i < 5; i++ {
+		conn, err = grpc.NewClient("analytics:50051", grpc.WithTransportCredentials(insecure.NewCredentials()))
+		if err == nil {
+			break
+		}
+		log.Printf("Failed to connect to analytics service, retry %d/5: %v", i+1, err)
+		time.Sleep(time.Duration(i+1) * time.Second)
+	}
 
 	if err != nil {
-		log.Fatalf("FATAL: could not connect to grpc server %v", err)
+		log.Fatalf("FATAL: could not connect to grpc server after 5 retries: %v", err)
 	}
 
 	analyticsClient = pb.NewAnalyticsServiceClient(conn)
