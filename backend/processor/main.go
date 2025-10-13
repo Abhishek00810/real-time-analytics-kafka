@@ -9,6 +9,7 @@ import (
 	"time"
 
 	_ "github.com/lib/pq"
+	"github.com/redis/go-redis/v9"
 	"github.com/segmentio/kafka-go"
 )
 
@@ -19,6 +20,11 @@ type ClickEvent struct {
 	PageUrl   string    `json:"page_url"`
 	TimeStamp time.Time `json:"time_stamp"`
 }
+
+var rdb = redis.NewClient(&redis.Options{
+	Addr: "redis:6379",
+	DB:   0,
+})
 
 // Only declare, don't initialize
 var (
@@ -111,5 +117,16 @@ func main() {
 		if err != nil {
 			log.Printf("Failed to store aggregated event: %v", err)
 		}
+
+		var CompactStr = event.UserId + "__+__" + event.PageUrl
+
+		KeyDeleted, err := rdb.Del(ctx, CompactStr).Result()
+
+		if err != nil {
+			log.Printf("error: Can't delete the existing cache: %v", err)
+		} else {
+			log.Printf("successfully deleted old cache: %d", KeyDeleted)
+		}
+
 	}
 }
