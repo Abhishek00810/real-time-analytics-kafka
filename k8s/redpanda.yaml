@@ -1,0 +1,93 @@
+#namespace
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: redpanda
+
+---
+
+#configmap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: redpanda-config
+  namespace: redpanda
+data:
+  redpanda.yaml: |
+    redpanda:
+      data_directory: /var/lib/redpanda/data
+      node_id: 0
+      kafka_api:
+        - address: 0.0.0.0
+          port: 9092
+      admin:
+        - address: 0.0.0.0
+          port: 9644
+
+---
+
+#service
+apiVerson: v1
+kind: Service
+metadata:
+  name: redpanda
+  namespace: redpanda
+spec:
+  ports:
+    - name: kafka
+      port: 9092
+      targetPort: 9092
+    - name: admin
+      port: 9644
+      targetPort: 9644
+  clusterIP: None
+  selector:
+    app: redpanda
+
+---
+
+#stateful set we dont' need deployment here otherwise it can't be stateful (stored data when crashes)
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: redpanda
+  namespace: redpanda
+spec:
+  serviceName: "redpanda"
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redpanda
+  template:
+    metadata:
+      labels:
+        app: redpanda
+    spec:
+      containers:
+        - name: redpanda
+          image: docker.redpanda.com/redpandadata/redpanda:latest
+          args:
+            - redpanda
+            - start
+            - --check=false
+            - --overprovisioned
+            - --smp=1
+            - --memory=1G
+            - --reserve-memory=0M
+            - --node-id=0
+            - --kafka-addr=PLAINTEXT://0.0.0.0:9092
+            - --advertise-kafka-addr=PLAINTEXT://redpanda:9092
+          ports:
+            - containerPort: 9092
+            - containerPort: 9644
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/redpanda/data
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 1Gi

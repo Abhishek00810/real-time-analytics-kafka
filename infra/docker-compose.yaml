@@ -53,7 +53,7 @@ services:
     command: ["redis-server", "--appendonly", "yes"]
     networks:
       - app-network
-
+  
 volumes:
   postgres-data:
   redis-data:
