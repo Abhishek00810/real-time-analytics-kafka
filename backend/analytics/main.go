@@ -23,9 +23,27 @@ type server struct {
 }
 
 var rdb = redis.NewClient(&redis.Options{
-	Addr: "redis:6379",
+	Addr: getRedisAddr(),
 	DB:   0,
 })
+
+// Helper function to get Redis address
+func getRedisAddr() string {
+	addr := os.Getenv("REDIS_ADDR")
+	if addr == "" {
+		// Fallback to individual host:port if REDIS_ADDR not set
+		host := os.Getenv("REDIS_HOST")
+		port := os.Getenv("REDIS_PORT")
+		if host == "" {
+			host = "localhost"
+		}
+		if port == "" {
+			port = "6379"
+		}
+		addr = host + ":" + port
+	}
+	return addr
+}
 
 func (s *server) GetEventCount(ctx context.Context, req *pb.EventCountRequest) (*pb.EventCountResponse, error) {
 	var count int64
@@ -77,6 +95,8 @@ func main() {
 	}
 
 	ctx := context.Background()
+
+	log.Printf("Connecting to Redis at: %s", getRedisAddr())
 	pong, err := rdb.Ping(ctx).Result()
 	if err != nil {
 		log.Fatalf("Could not connect to Redis: %v", err)

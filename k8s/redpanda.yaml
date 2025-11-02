@@ -98,7 +98,7 @@ spec:
             - --reserve-memory=0M
             - --node-id=0
             - --kafka-addr=PLAINTEXT://0.0.0.0:9092
-            - --advertise-kafka-addr=PLAINTEXT://localhost:30092
+            - --advertise-kafka-addr=PLAINTEXT://host.docker.internal:30092
           ports:
             - containerPort: 9092
             - containerPort: 9644

@@ -21,13 +21,8 @@ type ClickEvent struct {
 	TimeStamp time.Time `json:"time_stamp"`
 }
 
-var rdb = redis.NewClient(&redis.Options{
-	Addr: "redis:6379",
-	DB:   0,
-})
-
-// Only declare, don't initialize
 var (
+	rdb         *redis.Client
 	kafkaBroker string
 	kafkaTopic  string
 	db          *sql.DB
@@ -40,6 +35,23 @@ func getEnv(key, fallback string) string {
 		return value
 	}
 	return fallback
+}
+
+// ✅ Helper to get Redis address
+func getRedisAddr() string {
+	addr := os.Getenv("REDIS_ADDR")
+	if addr == "" {
+		host := os.Getenv("REDIS_HOST")
+		port := os.Getenv("REDIS_PORT")
+		if host == "" {
+			host = "localhost"
+		}
+		if port == "" {
+			port = "6379"
+		}
+		addr = host + ":" + port
+	}
+	return addr
 }
 
 func createConsumer(kafkaBroker, kafkaTopic string) *kafka.Reader {
@@ -67,18 +79,32 @@ func DBInit() {
 }
 
 func main() {
-	// 1. Load .env FIRST
-	// 2. NOW initialize variables
-	kafkaBroker = getEnv("KAFKA_BROKER", "localhost:9091")
+	// ✅ Initialize Redis INSIDE main
+	rdb = redis.NewClient(&redis.Options{
+		Addr: getRedisAddr(),
+		DB:   0,
+	})
+
+	// Test Redis connection
+	ctx := context.Background()
+	pong, err := rdb.Ping(ctx).Result()
+	if err != nil {
+		log.Printf("Warning: Could not connect to Redis: %v", err)
+	} else {
+		log.Printf("Redis connected: %s", pong)
+	}
+
+	// Initialize Kafka config
+	kafkaBroker = getEnv("KAFKA_BROKER", "localhost:9092")
 	kafkaTopic = getEnv("KAFKA_TOPIC", "clicks")
 
 	log.Printf("Config: Broker=%s, Topic=%s", kafkaBroker, kafkaTopic)
 
-	// 3. Create consumer with correct values
+	// Create consumer
 	consumer = createConsumer(kafkaBroker, kafkaTopic)
 	defer consumer.Close()
 
-	// 4. Initialize DB
+	// Initialize DB
 	DBInit()
 	defer db.Close()
 
@@ -90,6 +116,7 @@ func main() {
 		msg, err := consumer.ReadMessage(ctx)
 		if err != nil {
 			log.Printf("Can't read the message, %v", err)
+			time.Sleep(5 * time.Second) // ✅ Add delay to avoid spam
 			continue
 		}
 
@@ -127,6 +154,5 @@ func main() {
 		} else {
 			log.Printf("successfully deleted old cache: %d", KeyDeleted)
 		}
-
 	}
 }
