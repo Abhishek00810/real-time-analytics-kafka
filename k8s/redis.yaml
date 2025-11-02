@@ -1,0 +1,77 @@
+# namespace
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: data-layer
+
+---
+# internal headless service (for Redis clustering or StatefulSet)
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+  namespace: data-layer
+spec:
+  ports:
+    - port: 6379
+      targetPort: 6379
+  clusterIP: None  # headless service
+  selector:
+    app: redis
+
+---
+# external NodePort (for local/Docker Compose access)
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-external
+  namespace: data-layer
+spec:
+  type: NodePort
+  ports:
+    - name: redis
+      port: 6379
+      targetPort: 6379
+      nodePort: 30079
+  selector:
+    app: redis
+
+
+---
+#stateful set
+
+
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: redis
+  namespace: data-layer
+spec:
+  serviceName: "redis"  # Links to headless service
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      labels:
+        app: redis
+    spec:
+      containers:
+        - name: redis
+          image: redis:latest
+          ports:
+            - containerPort: 6379
+              name: redis
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/redis/data
+              subPath: redis  # Important! Avoids permission issues
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 5Gi
