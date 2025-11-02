@@ -2,7 +2,7 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: redpanda
+  name: data-layer
 
 ---
 
@@ -11,7 +11,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: redpanda-config
-  namespace: redpanda
+  namespace: data-layer
 data:
   redpanda.yaml: |
     redpanda:
@@ -26,12 +26,12 @@ data:
 
 ---
 
-#service
-apiVerson: v1
+# Headless Service (for StatefulSet)
+apiVersion: v1
 kind: Service
 metadata:
   name: redpanda
-  namespace: redpanda
+  namespace: data-layer
 spec:
   ports:
     - name: kafka
@@ -46,12 +46,34 @@ spec:
 
 ---
 
-#stateful set we dont' need deployment here otherwise it can't be stateful (stored data when crashes)
+# NodePort Service (ADD THIS!)
+apiVersion: v1
+kind: Service
+metadata:
+  name: redpanda-external
+  namespace: data-layer
+spec:
+  type: NodePort
+  ports:
+    - name: kafka
+      port: 9092
+      targetPort: 9092
+      nodePort: 30092
+    - name: admin
+      port: 9644
+      targetPort: 9644
+      nodePort: 30644
+  selector:
+    app: redpanda
+
+---
+
+#stateful set
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: redpanda
-  namespace: redpanda
+  namespace: data-layer
 spec:
   serviceName: "redpanda"
   replicas: 1
@@ -76,7 +98,7 @@ spec:
             - --reserve-memory=0M
             - --node-id=0
             - --kafka-addr=PLAINTEXT://0.0.0.0:9092
-            - --advertise-kafka-addr=PLAINTEXT://redpanda:9092
+            - --advertise-kafka-addr=PLAINTEXT://localhost:30092
           ports:
             - containerPort: 9092
             - containerPort: 9644

@@ -1,0 +1,107 @@
+#namespace
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: data-layer
+
+---
+#secrets
+apiVersion: v1
+kind: Secret
+metadata:
+  name: postgres-secret
+  namespace: data-layer
+type: Opaque
+stringData:
+  POSTGRES_USER: "abhishekdadwal"
+  POSTGRES_PASSWORD: "thisismy@123"
+  POSTGRES_DB: "events"
+
+---
+
+#headless service
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: data-layer
+spec:
+  ports:
+    - port: 5432
+      targetPort: 5432
+  clusterIP: None #headless
+  selector: 
+    app: postgres
+
+---
+#nodeport service to external basis
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-external
+  namespace: data-layer
+spec: 
+  type: NodePort
+  ports:
+    - port: 5432
+      targetPort: 5432
+      nodePort: 30432
+  selector:
+    app: postgres
+
+---
+
+#stateful set
+
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+  namespace: data-layer
+spec:
+  serviceName: "postgres"  # Links to headless service
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:15
+          ports:
+            - containerPort: 5432
+              name: postgres
+          env:
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_DB
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_PASSWORD
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+              subPath: postgres  # Important! Avoids permission issues
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 5Gi
