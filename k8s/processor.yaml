@@ -1,1 +1,120 @@
 #this service is using all the three services be it postgressql, redis, kafka
+# Namespace
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: app-layer
+
+
+---
+
+#secret
+apiVersion: v1
+kind: Secret
+metadata:
+  name: app-secrets
+  namespace: app-layer
+type: Opaque
+stringData:
+  # Kafka connection (internal K8s DNS)
+  KAFKA_BROKER: "redpanda.data-layer.svc.cluster.local:9092"
+  KAFKA_TOPIC: "clicks"
+  
+  # Database connection
+  DATABASE_URL: "postgres://abhishekdadwal:thisismy@123@postgres.data-layer.svc.cluster.local:5432/events?sslmode=disable"
+  POSTGRES_HOST: "postgres.data-layer.svc.cluster.local"
+  POSTGRES_PORT: "5432"
+  POSTGRES_USER: "abhishekdadwal"
+  POSTGRES_PASSWORD: "thisismy@123"
+  POSTGRES_DB: "events"
+  
+  # Redis connection
+  REDIS_HOST: "redis.data-layer.svc.cluster.local"
+  REDIS_PORT: "6379"
+  REDIS_ADDR: "redis.data-layer.svc.cluster.local:6379"
+  
+  # Service URLs
+  ANALYTICS_SERVICE_URL: "analytics.app-layer.svc.cluster.local:50051"
+
+---
+
+# Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: processor-deployment
+  namespace: app-layer
+  labels:
+    app: processor-go-api
+spec:
+  replicas: 2
+  selector:
+    matchLabels: 
+      app: processor-go-api
+  template:  
+    metadata:
+      labels:
+        app: processor-go-api
+    spec:
+      containers:
+        - name: processor-go-api
+          image: dadwalabhishek/processor:v1.0
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+              name: http
+          env:
+            - name: KAFKA_BROKER
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: KAFKA_BROKER
+            - name: KAFKA_TOPIC
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: KAFKA_TOPIC
+            - name: PORT
+              value: "8080"
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+
+---
+
+# ClusterIP Service (internal)
+apiVersion: v1
+kind: Service
+metadata:
+  name: ingestion
+  namespace: app-layer
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8080
+    targetPort: 8080
+    name: http
+  selector:
+    app: ingestion-go-api
+
+---
+
+# NodePort Service (external testing)
+apiVersion: v1
+kind: Service
+metadata:
+  name: ingestion-external
+  namespace: app-layer
+spec:
+  type: NodePort
+  ports:
+  - port: 8080
+    targetPort: 8080
+    nodePort: 30080
+    name: http
+  selector:
+    app: ingestion-go-api
