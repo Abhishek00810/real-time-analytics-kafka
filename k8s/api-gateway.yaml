@@ -1,0 +1,78 @@
+#namespace
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: app-layer
+
+---
+
+#service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-gateway-deployment
+  namespace: app-layer
+  labels:
+    app: api-gateway-go-api
+spec:
+  replicas: 2
+  selector:
+    matchLabels: 
+      app: api-gateway-go-api
+  template:  
+    metadata:
+      labels:
+        app: api-gateway-go-api
+    spec:
+      containers:
+        - name: api-gateway-go-api
+          image: dadwalabhishek/api-gateway:v1.0
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8081
+              name: http
+          env:
+            - name: PORT
+              value: "8081"
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+
+---
+# ClusterIP Service (internal)
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-gateway
+  namespace: app-layer
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8081
+    targetPort: 8081
+    name: http
+  selector:
+    app: api-gateway-go-api
+
+---
+
+# NodePort Service (external testing)
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-gateway-external
+  namespace: app-layer
+spec:
+  type: NodePort
+  ports:
+  - port: 8081
+    targetPort: 8081
+    nodePort: 30081
+    name: http
+  selector:
+    app: api-gateway-go-api
