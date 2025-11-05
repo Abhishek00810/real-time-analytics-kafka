@@ -1,0 +1,122 @@
+#namespace
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: app-layer
+
+---
+#secret
+
+apiVersion: v1
+kind: Secret
+metadata:
+  name: app-secrets
+  namespace: app-layer
+type: Opaque
+stringData:
+  # Kafka connection (internal K8s DNS)
+  
+  # Database connection
+  DATABASE_URL: "postgres://abhishekdadwal:thisismy@123@postgres.data-layer.svc.cluster.local:5432/events?sslmode=disable"
+  POSTGRES_HOST: "postgres.data-layer.svc.cluster.local"
+  POSTGRES_PORT: "5432"
+  POSTGRES_USER: "abhishekdadwal"
+  POSTGRES_PASSWORD: "thisismy@123"
+  POSTGRES_DB: "events"
+  
+  # Redis connection
+  REDIS_HOST: "redis.data-layer.svc.cluster.local"
+  REDIS_PORT: "6379"
+  REDIS_ADDR: "redis.data-layer.svc.cluster.local:6379"
+  
+  # Service URLs
+
+---
+#service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: analytics-deployment
+  namespace: app-layer
+  labels:
+    app: analytics-go-api
+spec:
+  replicas: 2
+  selector:
+    matchLabels: 
+      app: analytics-go-api
+  template:  
+    metadata:
+      labels:
+        app: analytics-go-api
+    spec:
+      containers:
+        - name: analytics-go-api
+          image: dadwalabhishek/analytics-service:v1.0
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 50051
+              name: grpc
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: DATABASE_URL
+            - name: REDIS_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: REDIS_HOST
+            - name: REDIS_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: REDIS_PORT
+            - name: REDIS_ADDR
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: REDIS_ADDR
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+
+---
+# ClusterIP Service (internal)
+apiVersion: v1
+kind: Service
+metadata:
+  name: analytics
+  namespace: app-layer
+spec:
+  type: ClusterIP
+  ports:
+  - port: 50051
+    targetPort: 50051
+    name: grpc
+  selector:
+    app: analytics-go-api
+
+---
+
+# NodePort Service (external testing)
+apiVersion: v1
+kind: Service
+metadata:
+  name: analytics-external
+  namespace: app-layer
+spec:
+  type: NodePort
+  ports:
+  - port: 50051
+    targetPort: 50051
+    nodePort: 30051
+    name: grpc
+  selector:
+    app: analytics-go-api
