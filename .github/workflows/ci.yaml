@@ -1,14 +1,50 @@
-name: Infra Pipeline
+name: CI/CD Supply Chain
 
-# 1. Trigger: Run this on every push to the main branch
 on:
   push:
     branches: ["main"]
 
-# 2. Jobs: The actual work to do
+env:
+  IMAGE_NAME: ${{ secrets.DOCKER_USERNAME }}/my-infra-app # e.g., harkirat/my-infra-app
+
 jobs:
-  sanity-check:
-    runs-on: ubuntu-latest  # This creates a fresh VM
+  # Job 1: The "Quality Gate"
+  # An Infra Engineer stops bad config from reaching production.
+  lint-k8s:
+    runs-on: ubuntu-latest
     steps:
-      - name: Say Hello
-        run: echo "The pipeline is working!"
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # We use 'kubeval' or 'kube-linter' to validate YAML syntax
+      - name: Lint Kubernetes Manifests
+        uses: stackrox/kube-linter-action@v1.0.4
+        with:
+          # Assuming your k8s files are in a folder named 'k8s'
+          directory: k8s
+          format: plain
+  
+  # Job 2: The Build & Push
+  build-push:
+    needs: lint-k8s # Only run if linting passes!
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          # We tag it with the commit SHA (Git hash)
+          # This is critical for versioning. Never just use 'latest'.
+          tags: |
+            ${{ env.IMAGE_NAME }}:latest
+            ${{ env.IMAGE_NAME }}:${{ github.sha }}
