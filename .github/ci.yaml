@@ -1,0 +1,14 @@
+name: Infra Pipeline
+
+# 1. Trigger: Run this on every push to the main branch
+on:
+  push:
+    branches: ["main"]
+
+# 2. Jobs: The actual work to do
+jobs:
+  sanity-check:
+    runs-on: ubuntu-latest  # This creates a fresh VM
+    steps:
+      - name: Say Hello
+        run: echo "The pipeline is working!"
