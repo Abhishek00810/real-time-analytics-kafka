@@ -37,6 +37,16 @@ spec:
       labels:
         app: ingestion-go-api
     spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchExpressions:
+                  - key: app
+                    operator: In
+                    values:
+                      - ingestion-go-api
+              topologyKey: kubernets.io/hostname
       containers:
         - name: ingestion-go-api
           image: dadwalabhishek/ingestion:v1.0

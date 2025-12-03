@@ -56,6 +56,16 @@ spec:
       labels:
         app: processor-go-api
     spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchExpressions:
+                  - key: app
+                    operator: In
+                    values:
+                      - processor-go-api
+              topologyKey: kubernetes.io/hostname
       containers:
         - name: processor-go-api
           image: dadwalabhishek/processor:v1.0

@@ -18,13 +18,23 @@ metadata:
 spec:
   replicas: 2
   selector:
-    matchLabels: 
+    matchLabels:
       app: api-gateway-go-api
   template:  
     metadata:
       labels:
         app: api-gateway-go-api
     spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchExpressions:
+                  - key: app
+                    operator: In
+                    values: 
+                      - api-gateway-go-api
+              topologyKey: kubernets.io/hostname
       containers:
         - name: api-gateway-go-api
           image: dadwalabhishek/api-gateway:v1.0
