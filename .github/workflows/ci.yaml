@@ -4,8 +4,7 @@ on:
   push:
     branches: ["main"]
 
-env:
-  IMAGE_NAME: ${{ secrets.DOCKER_USERNAME }}/my-infra-app # e.g., harkirat/my-infra-app
+# Removed env.IMAGE_NAME - using matrix.image instead
 
 jobs:
   # Job 1: The "Quality Gate"
@@ -24,10 +23,22 @@ jobs:
           directory: k8s
           format: plain
   
-  # Job 2: The Build & Push
-  build-push:
+  # Job 2: The Build & Push (Builds all services)
+  build-all:
     needs: lint-k8s # Only run if linting passes!
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [ingestion, processor, analytics, api-gateway]
+        include:
+          - service: ingestion
+            image: dadwalabhishek/ingestion
+          - service: processor
+            image: dadwalabhishek/processor
+          - service: analytics
+            image: dadwalabhishek/analytics-service
+          - service: api-gateway
+            image: dadwalabhishek/api-gateway
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -38,13 +49,12 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Build and Push Docker Image
+      - name: Build and Push ${{ matrix.service }}
         uses: docker/build-push-action@v5
         with:
-          context: .
+          context: ./backend
+          file: ./backend/${{ matrix.service }}/Dockerfile
           push: true
-          # We tag it with the commit SHA (Git hash)
-          # This is critical for versioning. Never just use 'latest'.
           tags: |
-            ${{ env.IMAGE_NAME }}:latest
-            ${{ env.IMAGE_NAME }}:${{ github.sha }}
+            ${{ matrix.image }}:latest
+            ${{ matrix.image }}:${{ github.sha }}
