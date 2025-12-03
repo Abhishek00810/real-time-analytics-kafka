@@ -29,6 +29,10 @@ spec:
         - name: api-gateway-go-api
           image: dadwalabhishek/api-gateway:v1.0
           imagePullPolicy: Always
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            readOnlyRootFilesystem: true
           ports:
             - containerPort: 8081
               name: http

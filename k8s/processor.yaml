@@ -60,6 +60,10 @@ spec:
         - name: processor-go-api
           image: dadwalabhishek/processor:v1.0
           imagePullPolicy: Always
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            readOnlyRootFilesystem: true
           ports:
             - containerPort: 8080
               name: http

@@ -51,10 +51,24 @@ spec:
       labels:
         app: analytics-go-api
     spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution: 
+            - labelSelector:
+                matchExpressions:
+                  - key: app
+                    operator: In
+                    values:   
+                      - analytics-go-api
+              topologyKey: kubernetes.io/hostname
       containers:
         - name: analytics-go-api
           image: dadwalabhishek/analytics-service:v1.0
           imagePullPolicy: Always
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            readOnlyRootFilesystem: true
           ports:
             - containerPort: 50051
               name: grpc

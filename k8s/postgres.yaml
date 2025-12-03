@@ -74,6 +74,10 @@ spec:
       containers:
         - name: postgres
           image: postgres:15
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            readOnlyRootFilesystem: true
           ports:
             - containerPort: 5432
               name: postgres
