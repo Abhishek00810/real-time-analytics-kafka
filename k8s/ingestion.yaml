@@ -46,7 +46,7 @@ spec:
                     operator: In
                     values:
                       - ingestion-go-api
-              topologyKey: kubernets.io/hostname
+              topologyKey: kubernetes.io/hostname
       containers:
         - name: ingestion-go-api
           image: dadwalabhishek/ingestion:v1.0
