@@ -1,0 +1,101 @@
+name: CI and Kind Deployment Test
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  kind-deploy-test:
+    runs-on: ubuntu-latest
+    steps:
+      # Step 1: Get the code
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Step 2: Set up Docker
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Step 3: Create kind cluster
+      - name: Create kind cluster
+        uses: helm/kind-action@v1.8.0
+        with:
+          cluster_name: test-cluster
+
+      # Step 4: Build all 4 services and load into kind
+      - name: Build and load ingestion
+        run: |
+          docker build -t ingestion:test -f ./backend/ingestion/Dockerfile ./backend
+          kind load docker-image ingestion:test --name test-cluster
+
+      - name: Build and load processor
+        run: |
+          docker build -t processor:test -f ./backend/processor/Dockerfile ./backend
+          kind load docker-image processor:test --name test-cluster
+
+      - name: Build and load analytics
+        run: |
+          docker build -t analytics-service:test -f ./backend/analytics/Dockerfile ./backend
+          kind load docker-image analytics-service:test --name test-cluster
+
+      - name: Build and load api-gateway
+        run: |
+          docker build -t api-gateway:test -f ./backend/api-gateway/Dockerfile ./backend
+          kind load docker-image api-gateway:test --name test-cluster
+
+      # Step 5: Update image names in manifests
+      - name: Update image names
+        run: |
+          sed -i 's|dadwalabhishek/ingestion:.*|ingestion:test|g' k8s/ingestion.yaml
+          sed -i 's|dadwalabhishek/processor:.*|processor:test|g' k8s/processor.yaml
+          sed -i 's|dadwalabhishek/analytics-service:.*|analytics-service:test|g' k8s/analytics.yaml
+          sed -i 's|dadwalabhishek/api-gateway:.*|api-gateway:test|g' k8s/api-gateway.yaml
+
+      # Step 6: Deploy infrastructure
+      - name: Deploy infrastructure
+        run: |
+          kubectl apply -f k8s/postgres.yaml
+          kubectl apply -f k8s/redis.yaml
+          kubectl apply -f k8s/redpanda.yaml
+
+      # Step 7: Wait for infrastructure
+      - name: Wait for infrastructure
+        run: |
+          sleep 30
+          kubectl get pods -n data-layer
+
+      # Step 8: Deploy applications
+      - name: Deploy applications
+        run: |
+          kubectl apply -f k8s/analytics.yaml
+          kubectl apply -f k8s/processor.yaml
+          kubectl apply -f k8s/ingestion.yaml
+          kubectl apply -f k8s/api-gateway.yaml
+
+      # Step 9: Wait for applications
+      - name: Wait for applications
+        run: |
+          sleep 30
+          kubectl get pods -n app-layer
+
+      # Step 10: Check if everything is running
+      - name: Check pods
+        run: |
+          echo "=== All Pods ==="
+          kubectl get pods -n data-layer
+          kubectl get pods -n app-layer
+          
+          # Count running pods
+          DATA_RUNNING=$(kubectl get pods -n data-layer --field-selector=status.phase=Running --no-headers 2>/dev/null | wc -l)
+          APP_RUNNING=$(kubectl get pods -n app-layer --field-selector=status.phase=Running --no-headers 2>/dev/null | wc -l)
+          
+          echo "Running: Data=$DATA_RUNNING, App=$APP_RUNNING"
+          
+          if [ "$DATA_RUNNING" -lt 3 ] || [ "$APP_RUNNING" -lt 4 ]; then
+            echo "❌ Some pods are not running"
+            exit 1
+          fi
+          
+          echo "✅ All pods are running!"
