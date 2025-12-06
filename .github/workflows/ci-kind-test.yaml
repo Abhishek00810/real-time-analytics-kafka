@@ -127,17 +127,17 @@ jobs:
           
           # More lenient check - at least some pods running
           if [ "$DATA_RUNNING" -lt 1 ]; then
-            echo "❌ No data-layer pods are running"
+            echo "No data-layer pods are running"
             exit 1
           fi
           
           if [ "$APP_RUNNING" -lt 2 ]; then
-            echo "⚠️  Warning: Not all app pods are running ($APP_RUNNING/8 expected)"
+            echo "Warning: Not all app pods are running ($APP_RUNNING/8 expected)"
             echo "This might be due to infrastructure issues. Checking..."
             kubectl get pods -n data-layer
             kubectl get pods -n app-layer
             # Don't fail if at least some pods are running (infrastructure might have issues)
           fi
           
-          echo "✅ Deployment test completed!"
+          echo "Deployment test completed!"
           echo "Note: Some pods may have issues (check logs above), but workflow validates basic deployment works"
