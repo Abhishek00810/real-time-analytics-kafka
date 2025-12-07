@@ -7,12 +7,14 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"net/http"
 	"os"
 	"strconv"
 
 	pb "event-analytics/proto/event-analytics/proto"
 
 	_ "github.com/lib/pq"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/redis/go-redis/v9"
 	"google.golang.org/grpc"
 )
@@ -108,6 +110,16 @@ func main() {
 		log.Fatal(err)
 	}
 	defer db.Close()
+
+	go func() {
+		http.Handle("/metrics", promhttp.Handler())
+		log.Println("Metrics server listening on :8080")
+		err := http.ListenAndServe(":8080", nil)
+
+		if err != nil {
+			log.Fatalf("Metrics server failed: %v", err)
+		}
+	}()
 
 	// gRPC server
 	lis, err := net.Listen("tcp", ":50051")

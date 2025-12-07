@@ -5,10 +5,12 @@ import (
 	"database/sql"
 	"encoding/json"
 	"log"
+	"net/http"
 	"os"
 	"time"
 
 	_ "github.com/lib/pq"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/redis/go-redis/v9"
 	"github.com/segmentio/kafka-go"
 )
@@ -80,6 +82,17 @@ func DBInit() {
 
 func main() {
 	// ✅ Initialize Redis INSIDE main
+
+	go func() {
+		http.Handle("/metrics", promhttp.Handler())
+		log.Println("Metrics running listening on server : 8080")
+		err := http.ListenAndServe(":8080", nil)
+
+		if err != nil {
+			log.Printf("Metrics server failed: %v", err)
+		}
+	}()
+
 	rdb = redis.NewClient(&redis.Options{
 		Addr: getRedisAddr(),
 		DB:   0,

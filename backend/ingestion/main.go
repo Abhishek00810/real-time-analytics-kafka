@@ -9,6 +9,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/segmentio/kafka-go"
 )
 
@@ -80,7 +81,7 @@ func main() {
 	}
 
 	http.HandleFunc("/ingest", service.ingestHandler) // here service is one struct copy where event channel has created and know it
-
+	http.Handle("/metrics", promhttp.Handler())
 	go func() {
 		for event := range eventChannel {
 			data, err := json.Marshal(event)

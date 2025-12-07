@@ -9,6 +9,7 @@ import (
 
 	pb "event-analytics/proto/event-analytics/proto"
 
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
@@ -84,6 +85,7 @@ func main() {
 	initGRPCclient()
 
 	http.HandleFunc("/analytics/events", analyticsHandler)
+	http.Handle("/metrics", promhttp.Handler())
 
 	log.Println("API Gateway listening on :8081")
 	if err := http.ListenAndServe(":8081", nil); err != nil {
