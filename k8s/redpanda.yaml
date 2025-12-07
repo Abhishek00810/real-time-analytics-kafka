@@ -99,9 +99,6 @@ spec:
             - --node-id=0
             - --kafka-addr=PLAINTEXT://0.0.0.0:9092
             - --advertise-kafka-addr=PLAINTEXT://redpanda.data-layer.svc.cluster.local:9092
-          securityContext:
-            runAsNonRoot: true
-            runAsUser: 999
           resources:
             requests:
               cpu: "500m"

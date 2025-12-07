@@ -74,9 +74,6 @@ spec:
       containers:
         - name: postgres
           image: postgres:15
-          securityContext:
-            runAsNonRoot: true
-            runAsUser: 999
           resources:
             requests:
               cpu: "200m"
