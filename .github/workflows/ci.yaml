@@ -69,5 +69,5 @@ jobs:
           file: ./backend/${{ matrix.service }}/Dockerfile
           push: true
           tags: |
-            ${{ matrix.image }}:latest
+            ${{ matrix.image }}:v1.0
             ${{ matrix.image }}:${{ github.sha }}
