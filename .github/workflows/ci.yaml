@@ -16,31 +16,26 @@ jobs:
         uses: actions/checkout@v4
 
       # We use 'kubeval' or 'kube-linter' to validate YAML syntax
-      - name: Install kube-linter
+      - name: Lint Kubernetes Manifests
         run: |
-          # Get the correct download URL from GitHub releases API
+          # Download kube-linter binary
           KUBE_LINTER_VERSION=0.7.6
-          DOWNLOAD_URL=$(curl -s https://api.github.com/repos/stackrox/kube-linter/releases/tags/v${KUBE_LINTER_VERSION} | \
-            grep "browser_download_url.*linux.*amd64.*tar.gz" | \
-            head -1 | \
-            cut -d '"' -f 4)
-          
-          if [ -z "$DOWNLOAD_URL" ]; then
-            echo "Could not find download URL, trying direct link..."
-            DOWNLOAD_URL="https://github.com/stackrox/kube-linter/releases/download/v${KUBE_LINTER_VERSION}/kube-linter_${KUBE_LINTER_VERSION}_Linux_x86_64.tar.gz"
-          fi
-          
-          echo "Downloading from: $DOWNLOAD_URL"
-          curl -sSfL "$DOWNLOAD_URL" -o kube-linter.tar.gz
-          tar -xzf kube-linter.tar.gz
+          curl -sSfL "https://github.com/stackrox/kube-linter/releases/download/v${KUBE_LINTER_VERSION}/kube-linter-linux" -o kube-linter
           chmod +x kube-linter
           sudo mv kube-linter /usr/local/bin/
-          kube-linter version
       
       - name: Lint Kubernetes Manifests
         run: |
-          # Config file .kube-linter.yaml excludes database files and disables conflicting checks
-          kube-linter lint k8s/ --format=plain
+          # Lint only application service files
+          # Excluding postgres.yaml and redpanda.yaml - databases need special security contexts
+          # In production, we'd use managed services (RDS, Cloud SQL) instead
+          kube-linter lint \
+            k8s/ingestion.yaml \
+            k8s/processor.yaml \
+            k8s/analytics.yaml \
+            k8s/api-gateway.yaml \
+            k8s/prometheus.yaml \
+            --format=plain
   
   # Job 2: The Build & Push (Builds all services)
   build-all:
