@@ -34,7 +34,6 @@ jobs:
             k8s/processor.yaml \
             k8s/analytics.yaml \
             k8s/api-gateway.yaml \
-            k8s/prometheus.yaml \
             --format=plain
   
   # Job 2: The Build & Push (Builds all services)
