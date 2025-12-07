@@ -18,7 +18,10 @@ jobs:
       # We use 'kubeval' or 'kube-linter' to validate YAML syntax
       - name: Install kube-linter
         run: |
-          curl -sSfL https://raw.githubusercontent.com/stackrox/kube-linter/main/scripts/install.sh | sh -s
+          # Download kube-linter binary
+          KUBE_LINTER_VERSION=0.7.6
+          curl -sSfL "https://github.com/stackrox/kube-linter/releases/download/${KUBE_LINTER_VERSION}/kube-linter-linux" -o kube-linter
+          chmod +x kube-linter
           sudo mv kube-linter /usr/local/bin/
       
       - name: Lint Kubernetes Manifests
