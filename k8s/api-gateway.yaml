@@ -22,19 +22,25 @@ spec:
       app: api-gateway-go-api
   template:  
     metadata:
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8081"
+        prometheus.io/path: "/metrics"
       labels:
         app: api-gateway-go-api
     spec:
       affinity:
         podAntiAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            - labelSelector:
-                matchExpressions:
-                  - key: app
-                    operator: In
-                    values: 
-                      - api-gateway-go-api
-              topologyKey: kubernetes.io/hostname
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app
+                      operator: In
+                      values: 
+                        - api-gateway-go-api
+                topologyKey: kubernetes.io/hostname
       containers:
         - name: api-gateway-go-api
           image: dadwalabhishek/api-gateway:v1.0

@@ -48,19 +48,25 @@ spec:
       app: analytics-go-api
   template:  
     metadata:
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/metrics"
       labels:
         app: analytics-go-api
     spec:
       affinity:
         podAntiAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution: 
-            - labelSelector:
-                matchExpressions:
-                  - key: app
-                    operator: In
-                    values:   
-                      - analytics-go-api
-              topologyKey: kubernetes.io/hostname
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app
+                      operator: In
+                      values:   
+                        - analytics-go-api
+                topologyKey: kubernetes.io/hostname
       containers:
         - name: analytics-go-api
           image: dadwalabhishek/analytics-service:v1.0
