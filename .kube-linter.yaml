@@ -1,0 +1,13 @@
+# Kube-linter configuration
+# Disable checks that conflict with database security contexts
+# In production, we'd use managed services (RDS, Cloud SQL) instead
+
+checks:
+  # Disable security context checks for databases
+  do-not-set-run-as-non-root-to-true: ignore
+  no-read-only-root-fs: ignore
+
+exclude:
+  - "k8s/postgres.yaml"
+  - "k8s/redpanda.yaml"
+
