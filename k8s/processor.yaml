@@ -47,7 +47,7 @@ metadata:
   labels:
     app: processor-go-api
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels: 
       app: processor-go-api

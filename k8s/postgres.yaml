@@ -16,6 +16,7 @@ stringData:
   POSTGRES_USER: "abhishekdadwal"
   POSTGRES_PASSWORD: "thisismy@123"
   POSTGRES_DB: "events"
+  POSTGRES_CONNECTION_STRING: "postgresql://abhishekdadwal:thisismy@123@localhost:5432/events?sslmode=disable"  # ADD THIS
 
 ---
 
@@ -70,6 +71,10 @@ spec:
     metadata:
       labels:
         app: postgres
+      annotations: 
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9187"
+        prometheus.io/path: "/metrics"
     spec:
       containers:
         - name: postgres
@@ -104,6 +109,25 @@ spec:
             - name: data
               mountPath: /var/lib/postgresql/data
               subPath: postgres  # Important! Avoids permission issues
+
+        - name: postgres-exporter
+          image: prometheuscommunity/postgres-exporter:v0.15.0
+          ports:
+            - containerPort: 9187
+              name: metrics
+          env:
+            - name: DATA_SOURCE_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_CONNECTION_STRING
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "64Mi"
+            limits:
+              cpu: "200m"
+              memory: "128Mi"
   volumeClaimTemplates:
     - metadata:
         name: data
