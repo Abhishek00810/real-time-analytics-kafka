@@ -11,6 +11,8 @@ A production-ready, microservices-based analytics platform built with Go, Kafka 
 - **Kubernetes Ready**: Full K8s manifests with StatefulSets, Services, and Secrets
 - **Docker Compose**: Local development and testing environment
 - **Production Patterns**: Health checks, retry logic, connection pooling, graceful shutdown
+- **Observability**: Prometheus metrics collection and Grafana dashboards
+- **Alerting**: Grafana-based alerting with Slack integration
 
 ## 🏗️ Architecture
 
@@ -141,6 +143,40 @@ curl -X GET http://localhost:8081/analytics/events \
 
 See [DEPLOYMENT.md](./DEPLOYMENT.md) for detailed Kubernetes deployment instructions.
 
+### Monitoring & Observability
+
+The platform includes full observability with Prometheus and Grafana:
+
+**Prometheus**:
+- Scrapes metrics from all application services (Go metrics)
+- Collects metrics from data layer (PostgreSQL, Redis, Redpanda)
+- Service discovery via Kubernetes pod annotations
+- Accessible at: `http://localhost:30900` (via port-forward)
+
+**Grafana**:
+- Pre-configured Prometheus datasource
+- Dashboards for service health, goroutines, memory usage
+- Alert rules for service downtime
+- Accessible at: `http://localhost:30300` (via port-forward)
+
+**Accessing Monitoring**:
+```bash
+# Port-forward Prometheus
+kubectl port-forward -n monitoring svc/prometheus 9090:9090
+
+# Port-forward Grafana
+kubectl port-forward -n monitoring svc/grafana 30300:3000
+```
+
+**Default Credentials**:
+- Grafana: `admin/admin` (change on first login)
+
+**Metrics Exposed**:
+- Application services: `go_goroutines`, `go_memstats_heap_alloc_bytes`, `process_cpu_seconds_total`
+- PostgreSQL: Database metrics via `postgres_exporter` sidecar
+- Redis: Cache metrics via `redis_exporter` sidecar
+- Redpanda: Native metrics on port 9644
+
 ## 📊 Technology Stack
 
 - **Language**: Go 1.21+
@@ -151,6 +187,8 @@ See [DEPLOYMENT.md](./DEPLOYMENT.md) for detailed Kubernetes deployment instruct
 - **Containerization**: Docker
 - **Orchestration**: Kubernetes
 - **Infrastructure**: StatefulSets, Services, Secrets, ConfigMaps
+- **Monitoring**: Prometheus, Grafana
+- **Metrics Exporters**: postgres_exporter, redis_exporter
 
 ## 📁 Project Structure
 
@@ -174,7 +212,9 @@ real-service-analytics/
 │   ├── processor.yaml      # Processor K8s manifest
 │   ├── postgres.yaml       # PostgreSQL StatefulSet
 │   ├── redis.yaml          # Redis StatefulSet
-│   └── redpanda.yaml       # Redpanda StatefulSet
+│   ├── redpanda.yaml       # Redpanda StatefulSet
+│   ├── prometheus.yaml     # Prometheus deployment & config
+│   └── grafana.yaml        # Grafana deployment & config
 ├── docker-compose.yaml     # Application services
 ├── README.md               # This file
 ├── ARCHITECTURE.md         # Architecture documentation
@@ -223,5 +263,6 @@ Abhishek Dadwal
 
 **Status**: Production Ready ✅  
 **Kubernetes**: Fully Configured ✅  
-**Monitoring**: In Progress 📊  
-**CI/CD**: In Progress 🚀
+**Monitoring**: Complete ✅ (Prometheus + Grafana)  
+**Alerting**: Configured ✅ (Grafana + Slack)  
+**CI/CD**: Configured ✅ (GitHub Actions)
