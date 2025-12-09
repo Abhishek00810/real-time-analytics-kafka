@@ -46,6 +46,7 @@ data:
 
 
 ---
+
 # ServiceAccount for Prometheus
 
 apiVersion: v1
