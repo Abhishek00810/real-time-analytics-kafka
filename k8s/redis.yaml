@@ -54,6 +54,10 @@ spec:
     metadata:
       labels:
         app: redis
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9121"
+        prometheus.io/path: "/metrics"
     spec:
       containers:
         - name: redis
@@ -76,6 +80,23 @@ spec:
             - name: data
               mountPath: /var/lib/redis/data
               subPath: redis  # Important! Avoids permission issues
+
+        - name: redis-exporter
+          image: oliver006/redis_exporter:v1.55.0
+          ports:
+            - containerPort: 9121
+              name: metrics
+          env:
+            - name: REDIS_ADDR
+              value: "redis://localhost:6379"
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "64Mi"
+            limits:
+              cpu: "200m"
+              memory: "128Mi"
+
   volumeClaimTemplates:
     - metadata:
         name: data
