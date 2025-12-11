@@ -78,7 +78,7 @@ spec:
               name: redis
           volumeMounts:
             - name: data
-              mountPath: /var/lib/redis/data
+              mountPath: /data
               subPath: redis  # Important! Avoids permission issues
 
         - name: redis-exporter

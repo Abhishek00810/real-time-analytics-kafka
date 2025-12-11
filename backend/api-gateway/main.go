@@ -67,7 +67,7 @@ func analyticsHandler(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		log.Printf("grpc called failed %v", err)
-		http.Error(w, "failed to get analytics", http.StatusInternalServerError)
+		http.Error(w, "failed to get analytics", http.StatusNotFound)
 		return
 	}
 

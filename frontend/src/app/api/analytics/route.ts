@@ -1,5 +1,6 @@
 // Next.js API Route - Proxy to avoid CORS issues
 import { NextRequest, NextResponse } from 'next/server';
+import axios from 'axios';
 
 const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:30081';
 
@@ -8,28 +9,19 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { user_id, page_url } = body;
 
-    const response = await fetch(`${BACKEND_URL}/analytics/events`, {
-      method: 'GET',
+    const response = await axios.get(`${BACKEND_URL}/analytics/events`, {
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ user_id, page_url }),
+      data: { user_id, page_url },
     });
-
-    if (!response.ok) {
-      return NextResponse.json(
-        { error: 'Backend API error' },
-        { status: response.status }
-      );
-    }
-
-    const data = await response.json();
-    return NextResponse.json(data);
-  } catch (error) {
+    console.log(response.data)
+    return NextResponse.json(response.data);
+  } catch (error: any) {
     console.error('API proxy error:', error);
     return NextResponse.json(
       { error: 'Failed to fetch from backend' },
-      { status: 500 }
+      { status: error.response?.status || 500 }
     );
   }
 }
@@ -53,20 +45,21 @@ export async function GET(request: NextRequest) {
   const results = await Promise.all(
     pages.map(async (pageUrl) => {
       try {
-        const response = await fetch(`${BACKEND_URL}/analytics/events`, {
-          method: 'GET',
+        console.log(`Fetching ${pageUrl}...`);
+        const response = await axios.get(`${BACKEND_URL}/analytics/events`, {
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ user_id: userId, page_url: pageUrl }),
+          data: { user_id: userId, page_url: pageUrl },
         });
         
-        if (response.ok) {
-          const data = await response.json();
-          // Return the raw backend response format: { user_id, page_url, count }
-          return data;
+        console.log(`Response for ${pageUrl}: status=${response.status}`);
+        console.log(`Data for ${pageUrl}:`, response.data);
+        return response.data;
+      } catch (error: any) {
+        if (error.response) {
+          console.error(`Failed for ${pageUrl}: ${error.response.status} - ${error.response.data}`);
+        } else {
+          console.error(`Exception for ${pageUrl}:`, error.message);
         }
-        // Return default format if request fails
-        return { user_id: userId, page_url: pageUrl, count: 0 };
-      } catch {
         return { user_id: userId, page_url: pageUrl, count: 0 };
       }
     })

@@ -49,7 +49,6 @@ export default function Dashboard() {
       setLoading(true);
       const response = await fetch('/api/analytics');
       if (!response.ok) throw new Error('Failed to fetch data');
-      console.log(response)
       const result = await response.json();
       setData(result);
       setLastUpdated(new Date());
@@ -58,7 +57,6 @@ export default function Dashboard() {
       setError('Failed to connect to backend');
       console.error(err);
     } finally {
-      console.log(data)
       setLoading(false);
     }
   };
