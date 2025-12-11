@@ -1,11 +1,12 @@
 # Real-Time Analytics Platform
 
-A production-ready, microservices-based analytics platform built with Go, Kafka (Redpanda), PostgreSQL, Redis, and Kubernetes. The system processes click events in real-time, aggregates analytics data, and serves cached results with high performance.
+A production-ready, microservices-based analytics platform built with Go, Next.js, Kafka (Redpanda), PostgreSQL, Redis, and Kubernetes. The system processes click events in real-time, aggregates analytics data, and serves cached results with high performance. Includes a beautiful web dashboard for visualizing analytics data.
 
 ## 🎯 Features
 
 - **Real-Time Event Processing**: Kafka-based event ingestion and processing pipeline
 - **Microservices Architecture**: 4 independent services (Ingestion, Processor, Analytics, API Gateway)
+- **Web Dashboard**: Beautiful Next.js frontend with real-time analytics visualization
 - **Caching Layer**: Redis cache for sub-millisecond query responses
 - **gRPC Communication**: High-performance inter-service communication
 - **Kubernetes Ready**: Full K8s manifests with StatefulSets, Services, and Secrets
@@ -17,37 +18,54 @@ A production-ready, microservices-based analytics platform built with Go, Kafka 
 ## 🏗️ Architecture
 
 ```
-┌─────────────┐
-│   Client    │
-└──────┬──────┘
-       │ HTTP
-       ▼
-┌─────────────────┐     gRPC      ┌──────────────┐
-│   API Gateway   │──────────────▶│  Analytics   │
-│   (Port 8081)   │               │ (Port 50051) │
-└─────────────────┘               └──────┬───────┘
-                                          │
-                                          ▼
-                                   ┌──────────────┐
-                                   │   Redis      │
-                                   │   (Cache)    │
-                                   └──────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│                    Frontend (Next.js)                       │
+│              http://localhost:3000                          │
+│         Real-time Analytics Dashboard                      │
+└───────────────┬─────────────────────────────────────────────┘
+                │ HTTP
+                ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    API Gateway (Go)                         │
+│              Port 8081 / NodePort 30081                      │
+└───────────────┬─────────────────────────────────────────────┘
+                │ gRPC
+                ▼
+┌─────────────────────────────────────────────────────────────┐
+│                 Analytics Service (Go)                     │
+│              Port 50051                                     │
+└───────────────┬─────────────────────────────────────────────┘
+                │
+        ┌───────┴───────┐
+        │               │
+        ▼               ▼
+┌──────────────┐  ┌──────────────┐
+│   Redis      │  │  PostgreSQL │
+│   (Cache)    │  │  (Database)  │
+└──────────────┘  └──────────────┘
 
-┌─────────────┐
-│   Client    │
-└──────┬──────┘
-       │ HTTP POST
-       ▼
-┌─────────────────┐     Kafka      ┌──────────────┐
-│   Ingestion     │───────────────▶│  Processor   │
-│   (Port 8080)   │   (Redpanda)   │              │
-└─────────────────┘                └──────┬───────┘
-                                           │
-                                           ▼
-                                    ┌──────────────┐
-                                    │  PostgreSQL  │
-                                    │   (Database) │
-                                    └──────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│                 Ingestion Service (Go)                      │
+│              Port 8080 / NodePort 30080                      │
+└───────────────┬─────────────────────────────────────────────┘
+                │ Kafka (Redpanda)
+                ▼
+┌─────────────────────────────────────────────────────────────┐
+│                 Processor Service (Go)                      │
+│              Consumes from Kafka                            │
+└───────────────┬─────────────────────────────────────────────┘
+                │
+                ▼
+        ┌──────────────┐
+        │  PostgreSQL  │
+        │  (Database)  │
+        └──────────────┘
+
+┌─────────────────────────────────────────────────────────────┐
+│              Monitoring Stack                               │
+│  Prometheus (Port 9090) + Grafana (Port 30300)              │
+│  Scrapes metrics from all services                          │
+└─────────────────────────────────────────────────────────────┘
 ```
 
 ## 📋 Services
@@ -79,8 +97,18 @@ A production-ready, microservices-based analytics platform built with Go, Kafka 
 ### 4. **API Gateway** (`backend/api-gateway/`)
 - **Purpose**: HTTP gateway for external clients
 - **Tech**: Go, HTTP, gRPC Client
-- **Port**: 8081
+- **Port**: 8081 (NodePort: 30081)
 - **Function**: REST API that calls Analytics service via gRPC
+
+### 5. **Frontend Dashboard** (`frontend/`)
+- **Purpose**: Web-based analytics dashboard
+- **Tech**: Next.js 16, TypeScript, Chart.js
+- **Port**: 3000 (development)
+- **Function**: 
+  - Real-time analytics visualization
+  - Interactive charts (Bar, Doughnut)
+  - Auto-refresh dashboard
+  - Beautiful Google Analytics-inspired UI
 
 ## 🚀 Quick Start
 
@@ -139,9 +167,81 @@ curl -X GET http://localhost:8081/analytics/events \
   -d '{"user_id": "user_1", "page_url": "https://example.com"}'
 ```
 
-### Kubernetes Deployment
+### Kubernetes Deployment (Kind)
 
-See [DEPLOYMENT.md](./DEPLOYMENT.md) for detailed Kubernetes deployment instructions.
+1. **Create Kind cluster**
+```bash
+kind create cluster --name analytics-cluster
+```
+
+2. **Deploy infrastructure (PostgreSQL, Redis, Redpanda)**
+```bash
+kubectl apply -f k8s/postgres.yaml
+kubectl apply -f k8s/redis.yaml
+kubectl apply -f k8s/redpanda.yaml
+```
+
+3. **Initialize database**
+```bash
+kubectl exec -n data-layer -it postgres-0 -- psql -U abhishekdadwal -d events -f /docker-entrypoint-initdb.d/init.sql
+```
+
+4. **Deploy application services**
+```bash
+kubectl apply -f k8s/ingestion.yaml
+kubectl apply -f k8s/processor.yaml
+kubectl apply -f k8s/analytics.yaml
+kubectl apply -f k8s/api-gateway.yaml
+```
+
+5. **Deploy monitoring stack**
+```bash
+kubectl apply -f k8s/prometheus.yaml
+kubectl apply -f k8s/grafana.yaml
+```
+
+6. **Access services**
+```bash
+# API Gateway
+kubectl port-forward -n app-layer svc/api-gateway-external 30081:8081
+
+# Ingestion
+kubectl port-forward -n app-layer svc/ingestion-external 30080:8080
+
+# Prometheus
+kubectl port-forward -n monitoring svc/prometheus 9090:9090
+
+# Grafana
+kubectl port-forward -n monitoring svc/grafana 30300:3000
+```
+
+### Frontend Development
+
+1. **Navigate to frontend directory**
+```bash
+cd frontend
+```
+
+2. **Install dependencies**
+```bash
+npm install
+```
+
+3. **Start development server**
+```bash
+npm run dev
+```
+
+4. **Access dashboard**
+- Open `http://localhost:3000` in your browser
+- Make sure API Gateway port-forward is running on `localhost:30081`
+
+**Frontend Features**:
+- Real-time click analytics per page
+- Interactive charts (Bar chart for top pages, Doughnut chart for distribution)
+- Auto-refresh every 30 seconds
+- Beautiful dark green/lime green theme
+- Responsive design
 
 ### Monitoring & Observability
 
@@ -179,16 +279,27 @@ kubectl port-forward -n monitoring svc/grafana 30300:3000
 
 ## 📊 Technology Stack
 
+**Backend**:
 - **Language**: Go 1.21+
 - **Message Queue**: Redpanda (Kafka-compatible)
 - **Database**: PostgreSQL 15
 - **Cache**: Redis 7
 - **Communication**: gRPC, HTTP/REST
 - **Containerization**: Docker
-- **Orchestration**: Kubernetes
+- **Orchestration**: Kubernetes (Kind)
 - **Infrastructure**: StatefulSets, Services, Secrets, ConfigMaps
-- **Monitoring**: Prometheus, Grafana
+
+**Frontend**:
+- **Framework**: Next.js 16 (App Router)
+- **Language**: TypeScript
+- **Charts**: Chart.js
+- **Styling**: CSS Modules
+
+**Monitoring & Observability**:
+- **Metrics**: Prometheus
+- **Visualization**: Grafana
 - **Metrics Exporters**: postgres_exporter, redis_exporter
+- **Alerting**: Grafana Unified Alerting
 
 ## 📁 Project Structure
 
@@ -202,6 +313,17 @@ real-service-analytics/
 │   ├── proto/              # gRPC protocol definitions
 │   ├── go.mod              # Go dependencies
 │   └── go.sum
+├── frontend/
+│   ├── src/
+│   │   └── app/
+│   │       ├── page.tsx    # Main dashboard page
+│   │       ├── layout.tsx  # Root layout with sidebar
+│   │       ├── api/
+│   │       │   └── analytics/
+│   │       │       └── route.ts  # Next.js API route (proxy)
+│   │       └── globals.css # Global styles
+│   ├── package.json
+│   └── next.config.js
 ├── infra/
 │   ├── docker-compose.yaml # Infrastructure services
 │   └── init.sql            # Database schema
@@ -217,9 +339,10 @@ real-service-analytics/
 │   └── grafana.yaml        # Grafana deployment & config
 ├── docker-compose.yaml     # Application services
 ├── README.md               # This file
-├── ARCHITECTURE.md         # Architecture documentation
-├── DEPLOYMENT.md           # Deployment guide
-└── API.md                  # API documentation
+├── API.md                  # API documentation
+└── .github/
+    └── workflows/
+        └── ci.yaml         # CI/CD pipeline
 ```
 
 ## 🔧 Configuration
@@ -239,6 +362,7 @@ real-service-analytics/
 - **Query Latency**: < 10ms (cached), < 50ms (database)
 - **Cache Hit Rate**: 80%+ (after warm-up)
 - **Throughput**: Horizontally scalable via Kubernetes
+- **Frontend**: Auto-refresh every 30 seconds, sub-second load times
 
 ## 🧪 Testing
 
@@ -263,6 +387,27 @@ Abhishek Dadwal
 
 **Status**: Production Ready ✅  
 **Kubernetes**: Fully Configured ✅  
+**Frontend**: Complete ✅ (Next.js Dashboard)  
 **Monitoring**: Complete ✅ (Prometheus + Grafana)  
-**Alerting**: Configured ✅ (Grafana + Slack)  
+**Alerting**: Configured ✅ (Grafana Unified Alerting)  
 **CI/CD**: Configured ✅ (GitHub Actions)
+
+---
+
+## 🎬 Quick Demo
+
+1. **Start all services** (Kubernetes + Frontend)
+2. **Ingest some events**:
+```bash
+curl -X POST http://localhost:30080/ingest \
+  -H "Content-Type: application/json" \
+  -d '{"event_id": "demo_1", "user_id": "user_123", "event_type": "click", "page_url": "/docs"}'
+```
+
+3. **View dashboard**: Open `http://localhost:3000`
+4. **Check Grafana**: Open `http://localhost:30300` (admin/admin)
+5. **Check Prometheus**: Open `http://localhost:9090`
+
+---
+
+**Built with ❤️ by Abhishek Dadwal**
