@@ -3,8 +3,8 @@ import "./globals.css";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "Fundio Analytics",
-  description: "Real-time analytics dashboard",
+  title: "Real-Time Analytics | Dashboard",
+  description: "Microservices Analytics Platform Demo",
 };
 
 export default function RootLayout({
@@ -19,47 +19,68 @@ export default function RootLayout({
           
           {/* Dark Sidebar */}
           <aside style={{ 
-            width: '100px', 
+            width: '88px', 
             backgroundColor: 'var(--bg-sidebar)', 
-            padding: '2rem 0',
+            padding: '1.5rem 0',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
-            gap: '2rem',
+            gap: '0.5rem',
             position: 'fixed',
             height: '100vh',
-            zIndex: 10
+            zIndex: 10,
+            borderRadius: '0 24px 24px 0'
           }}>
             {/* Logo */}
             <div style={{ 
               width: '48px', 
               height: '48px', 
-              background: 'white', 
-              borderRadius: '50%',
+              background: 'linear-gradient(135deg, var(--primary) 0%, #8FB831 100%)', 
+              borderRadius: '14px',
               display: 'flex', 
               alignItems: 'center', 
               justifyContent: 'center',
-              fontSize: '1.5rem'
+              fontSize: '1.5rem',
+              marginBottom: '2rem',
+              boxShadow: '0 4px 12px rgba(193, 225, 74, 0.3)'
             }}>
               ⚡
             </div>
 
             {/* Nav Items */}
-            <nav style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginTop: '2rem' }}>
-              <NavItem href="/" icon="📊" active />
-              <NavItem href="/ingest" icon="⚡" />
-              <NavItem href="/analytics" icon="🔍" />
-              <NavItem href="#" icon="⚙️" />
+            <nav style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', flex: 1 }}>
+              <NavItem href="/" icon="📊" label="Dashboard" active />
+              <NavItem href="/ingest" icon="📤" label="Ingest" />
+              <NavItem href="/analytics" icon="🔍" label="Query" />
+              <NavItem href="#" icon="⚙️" label="Settings" />
             </nav>
 
-            {/* Bottom Avatar */}
-            <div style={{ marginTop: 'auto', marginBottom: '1rem' }}>
-              <div style={{ width: '40px', height: '40px', background: '#333', borderRadius: '50%' }}></div>
+            {/* Status Indicator */}
+            <div style={{ 
+              padding: '12px',
+              background: 'rgba(193, 225, 74, 0.1)',
+              borderRadius: '12px',
+              marginTop: 'auto',
+              marginBottom: '1rem'
+            }}>
+              <div style={{ 
+                width: '12px', 
+                height: '12px', 
+                background: 'var(--primary)', 
+                borderRadius: '50%',
+                boxShadow: '0 0 8px var(--primary)'
+              }}></div>
             </div>
           </aside>
 
-          {/* Main Content Area */}
-          <main style={{ marginLeft: '100px', flex: 1, padding: '2rem', backgroundColor: 'var(--bg-body)', minHeight: '100vh' }}>
+          {/* Main Content */}
+          <main style={{ 
+            marginLeft: '88px', 
+            flex: 1, 
+            padding: '2rem 2.5rem', 
+            backgroundColor: 'var(--bg-body)', 
+            minHeight: '100vh' 
+          }}>
             {children}
           </main>
 
@@ -69,22 +90,32 @@ export default function RootLayout({
   );
 }
 
-// Helper Component for Sidebar Items
-function NavItem({ href, icon, active }: { href: string; icon: string; active?: boolean }) {
+function NavItem({ href, icon, label, active }: { href: string; icon: string; label: string; active?: boolean }) {
   return (
     <Link href={href} style={{
-      width: '48px',
-      height: '48px',
+      width: '56px',
+      height: '56px',
       borderRadius: '16px',
       backgroundColor: active ? 'var(--primary)' : 'transparent',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      fontSize: '1.5rem',
-      color: active ? '#0D1E16' : '#666',
-      transition: '0.2s'
-    }}>
+      fontSize: '1.4rem',
+      color: active ? '#0D1E16' : '#6B7280',
+      transition: 'all 0.2s',
+      position: 'relative'
+    }} title={label}>
       {icon}
+      {active && (
+        <div style={{
+          position: 'absolute',
+          right: '-8px',
+          width: '4px',
+          height: '24px',
+          background: 'var(--primary)',
+          borderRadius: '4px 0 0 4px'
+        }}></div>
+      )}
     </Link>
   )
 }

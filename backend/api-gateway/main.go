@@ -36,7 +36,7 @@ func initGRPCclient() {
 
 	analyticsClient = pb.NewAnalyticsServiceClient(conn)
 
-	log.Print("STATUS SUCCESSFULL: GPRC server connected with client")
+	log.Print("STATUS SUCCESSFULL: GPRC server connected with client, working smooothly")
 }
 
 func analyticsHandler(w http.ResponseWriter, r *http.Request) {
