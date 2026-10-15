@@ -80,6 +80,45 @@ func DBInit() {
 	log.Println("Database connected successfully")
 }
 
+// storeEvent writes the raw event and bumps the aggregate in a single
+// transaction. The aggregate is only incremented when the raw insert actually
+// added a row, so a replayed event_id does not inflate click_count. It reports
+// whether the event was new (and hence whether the aggregate changed).
+func storeEvent(ctx context.Context, db *sql.DB, event ClickEvent) (bool, error) {
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return false, err
+	}
+	defer tx.Rollback()
+
+	res, err := tx.ExecContext(ctx, `INSERT INTO click_events (event_id, user_id, event_type, page_url, time_stamp)
+					VALUES ($1, $2, $3, $4, $5) ON CONFLICT (event_id) DO NOTHING`,
+		event.EventId, event.UserId, event.EventType, event.PageUrl, event.TimeStamp)
+	if err != nil {
+		return false, err
+	}
+
+	inserted, err := res.RowsAffected()
+	if err != nil {
+		return false, err
+	}
+	if inserted != 1 {
+		return false, tx.Commit()
+	}
+
+	_, err = tx.ExecContext(ctx, `INSERT INTO page_clicks (user_id, page_url, click_count) VALUES 
+						($1, $2, 1) ON CONFLICT (user_id, page_url) DO UPDATE SET click_count = page_clicks.click_count + 1`,
+		event.UserId, event.PageUrl)
+	if err != nil {
+		return false, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
 func main() {
 	// ✅ Initialize Redis INSIDE main
 
@@ -142,20 +181,15 @@ func main() {
 			continue
 		}
 
-		_, err = db.Exec(`INSERT INTO click_events (event_id, user_id, event_type, page_url, time_stamp)
-						VALUES ($1, $2, $3, $4, $5) ON CONFLICT (event_id) DO NOTHING`,
-			event.EventId, event.UserId, event.EventType, event.PageUrl, event.TimeStamp)
-
+		changed, err := storeEvent(ctx, db, event)
 		if err != nil {
-			log.Printf("Failed to store raw event: %v", err)
+			log.Printf("Failed to store event %s: %v", event.EventId, err)
+			continue
 		}
 
-		_, err = db.Exec(`INSERT INTO page_clicks (user_id, page_url, click_count) VALUES 
-							($1, $2, 1) ON CONFLICT (user_id, page_url) DO UPDATE SET click_count = page_clicks.click_count + 1`,
-			event.UserId, event.PageUrl)
-
-		if err != nil {
-			log.Printf("Failed to store aggregated event: %v", err)
+		if !changed {
+			log.Printf("Duplicate event %s ignored", event.EventId)
+			continue
 		}
 
 		var CompactStr = event.UserId + "__+__" + event.PageUrl
