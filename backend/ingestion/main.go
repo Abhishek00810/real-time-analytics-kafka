@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -48,6 +49,20 @@ func createProducer(kafkaBroker, kafkaTopic string) *kafka.Writer {
 
 var producer = createProducer(kafkaBroker, kafkaTopic)
 
+// validateEvent checks that the fields required downstream are set.
+func validateEvent(e ClickEvent) error {
+	if strings.TrimSpace(e.EventId) == "" {
+		return fmt.Errorf("event_id is required")
+	}
+	if strings.TrimSpace(e.UserId) == "" {
+		return fmt.Errorf("user_id is required")
+	}
+	if strings.TrimSpace(e.EventType) == "" {
+		return fmt.Errorf("event_type is required")
+	}
+	return nil
+}
+
 // response , request
 func (s *IngestService) ingestHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
@@ -60,6 +75,11 @@ func (s *IngestService) ingestHandler(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		http.Error(w, "invalid json body", http.StatusBadRequest)
+		return
+	}
+
+	if err := validateEvent(PerClickEvent); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
