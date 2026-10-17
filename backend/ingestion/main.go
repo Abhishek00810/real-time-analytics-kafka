@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -60,6 +61,13 @@ func (s *IngestService) ingestHandler(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		http.Error(w, "invalid json body", http.StatusBadRequest)
+		return
+	}
+
+	if strings.TrimSpace(PerClickEvent.EventId) == "" ||
+		strings.TrimSpace(PerClickEvent.UserId) == "" ||
+		strings.TrimSpace(PerClickEvent.EventType) == "" {
+		http.Error(w, "event_id, user_id and event_type are required", http.StatusBadRequest)
 		return
 	}
 
